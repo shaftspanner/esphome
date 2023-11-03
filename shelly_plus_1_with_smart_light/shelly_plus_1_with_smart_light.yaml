@@ -1,0 +1,194 @@
+substitutions:
+  device_name: "Office Light Shelly Plus 1"
+  # Name of entity to be controlled by this device
+  target_entity: "light.office_light"
+  # Higher value gives lower watt readout
+  current_res: "0.001"
+  # Lower value gives lower voltage readout
+  voltage_div: "1925"
+
+esphome:
+  name: shelly-plus-1
+  platformio_options:
+    board_build.f_cpu: 160000000L
+
+esp32:
+  board: esp32doit-devkit-v1
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_FREERTOS_UNICORE: y
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_160: y
+      CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ: "160"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  ap:
+    ssid: "Shelly Office Fallback Hotspot"
+    password: !secret ap_password
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+
+ota:
+  password: !secret ota_password
+
+# Enable Web server (optional).
+web_server:
+  port: 80
+
+
+# Shelly 1 detached switch config with fallback in case of wifi or api fail
+output:
+  - platform: gpio
+    id: "relay_output"
+    pin: GPIO26
+
+switch:
+  - platform: output
+    id: "shelly_relay"
+    name: "${device_name} Relay"
+    output: "relay_output"
+    # after reboot, keep the relay off. this prevents light turning on after a power outage
+    restore_mode: ALWAYS_OFF
+
+binary_sensor:
+  - platform: gpio
+    name: ${device_name} Input
+    id: toggle
+    pin:
+      number: GPIO4
+    # small delay to prevent debouncing
+    filters:
+      - delayed_on_off: 50ms
+    # config for state change of input toggle
+    # Case 1: Can't connect to home assistant.  Relay is off so smart bulb must be off and state change was off - do nothing
+    # Case 2: Can't connect to home assistant.  Relay is off so smart bulb must be off and state change was on - turn on relay
+    # Case 3: Can't connect to home assistant, Relay is on so smart bulb is powered but state is unknown, and state change was off - turn off relay
+    # Case 4: Can't connect to home assistant, Relay is on so the smart bulb is powered but state is unknown, and state change was to on - Turn off relay then turn it on
+    # Case 5: API is connected, relay is off so smart bulb must be off.  State change was to off -  do nothing.  This is problematic as it means the API is connected but the smart bulb still can't be controlled using home assistant
+    # Case 6: API is connected, relay is off so smart bulb must be off.  State change was to on - turn on relay
+    # Case 7: API is connected, relay is on so smart bulb is powered but state is unknown.  State change was to off - tell home assistant to turn off smart bulb
+    # Case 8: API is connected, relay is on so smart bulb is powered but state is unknown.  State change was to on - tell home assistant to turn on smart bulb
+
+    on_state:
+        then:
+          - if:
+              condition:
+                - api.connected:
+              then:
+                # API is connected so we can talk to Homeassistant
+                - logger.log: API is connected!
+                - if:
+                    condition: 
+                      - switch.is_on: shelly_relay
+                    then:
+                      - if:
+                          condition:
+                            - binary_sensor.is_on: toggle
+                          then:
+                            # Case 8: API is connected, relay is on so smart bulb is powered but state is unknown.  State change was to on - tell home assistant to turn on smart bulb
+                            - logger.log: Switch was turned on
+                            - homeassistant.service:
+                                service: light.turn_on
+                                data:
+                                  entity_id: ${target_entity}
+                            - logger.log: Case 8 - Light was turned on
+                          else:
+                            # Case 7: API is connected, relay is on so smart bulb is powered but state is unknown.  State change was to off - tell home assistant to turn off smart bulb
+                            - logger.log: Switch was turned off
+                            - homeassistant.service:
+                                service: light.turn_off
+                                data:
+                                  entity_id: ${target_entity}
+                            - logger.log: Case 7 - Light was turned off
+                    else:
+                      - if:
+                          condition:
+                            - binary_sensor.is_on: toggle
+                          then:
+                            # Case 6: API is connected, relay is off so smart bulb must be off.  State change was to on - turn on relay
+                            - logger.log: Switch was turned on
+                            - switch.turn_on: shelly_relay
+                            - logger.log: Case 6 - Relay was turned on
+                          else:
+                            # Case 5: API is connected, relay is off so smart bulb must be off.  State change was to off -  do nothing.  This is problematic as it means the API is connected but the smart bulb still can't be controlled using home assistant
+                            - logger.log: Switch was turned off
+                            - logger.log: Case 5 - Relay was already turned off                              
+              else:
+                - if:
+                    condition: 
+                      - switch.is_on: shelly_relay
+                    then:
+                      - if:
+                          condition:
+                            - binary_sensor.is_on: toggle
+                          then:
+                            # Case 4: Can't connect to home assistant, Relay is on so the smart bulb is powered but state is unknown, and state change was to on - Turn off relay then turn it on
+                            - logger.log: Switch was turned on
+                            - switch.turn_off: shelly_relay
+                            - delay: 0.2s
+                            - switch.turn_on: shelly_relay
+                            - logger.log: Case 4 - Relay was cycled on
+                          else:
+                            # Case 3: Can't connect to home assistant, Relay is on so smart bulb is powered but state is unknown, and state change was off - turn off relay
+                            - logger.log: Switch as turned off
+                            - switch.turn_off: shelly_relay
+                            - logger.log: Case 3 - Relay was turned off
+                    else:
+                      - if:
+                          condition:
+                            - binary_sensor.is_on: toggle
+                          then:
+                            # Case 2: Can't connect to home assistant.  Relay is off so smart bulb must be off and state change was on - turn on relay
+                            - logger.log: Switch was turned on
+                            - switch.turn_on: shelly_relay
+                            - logger.log: Case 2 - Relay was turned on
+                          else:
+                            # Case 1: Can't connect to home assistant.  Relay is off so smart bulb must be off and state change was off - do nothing
+                            - logger.log: Switch was turned off
+                            - logger.log: Relay was already off
+      
+
+sensor:
+  - platform: ntc
+    sensor: temp_resistance_reading
+    name: "${device_name} Temperature"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+    calibration:
+      b_constant: 3350
+      reference_resistance: 10kOhm
+      reference_temperature: 298.15K
+    on_value_range:
+      - above: "80.0"
+        then:
+          - switch.turn_off: "shelly_relay"
+  - platform: resistance
+    id: temp_resistance_reading
+    sensor: temp_analog_reading
+    configuration: DOWNSTREAM
+    resistor: 10kOhm
+  - platform: adc
+    id: temp_analog_reading
+    pin: GPIO32
+    attenuation: 11db
+
+  - platform: adc
+    name: "${device_name} Relay Supply Voltage"
+    pin: GPIO33
+    attenuation: 11db
+    filters:
+      - multiply: 8
+
+status_led:
+  pin:
+    number: GPIO0
+    inverted: true
