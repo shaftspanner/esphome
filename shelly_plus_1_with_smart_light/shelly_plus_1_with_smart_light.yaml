@@ -153,7 +153,7 @@ binary_sensor:
                           else:
                             # Case 1: Can't connect to home assistant.  Relay is off so smart bulb must be off and state change was off - do nothing
                             - logger.log: Switch was turned off
-                            - logger.log: Relay was already off
+                            - logger.log: Case 1 - Relay was already off
       
 
 sensor:
