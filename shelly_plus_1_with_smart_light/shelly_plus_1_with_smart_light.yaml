@@ -1,14 +1,21 @@
 substitutions:
+  # Nice name
   device_name: "Office Light Shelly Plus 1"
+  # Unique name for the device
+  name: "shelly-plus-1-office"
   # Name of entity to be controlled by this device
   target_entity: "light.office_light"
+  # Static IP Address for the device
+  static_ip: "192.168.0.225"
+  
+  
   # Higher value gives lower watt readout
   current_res: "0.001"
   # Lower value gives lower voltage readout
   voltage_div: "1925"
 
 esphome:
-  name: shelly-plus-1
+  name: ${name}
   platformio_options:
     board_build.f_cpu: 160000000L
 
@@ -24,6 +31,10 @@ esp32:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+  manual_ip:
+    static_ip: ${static_ip}
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
   
   ap:
     ssid: "Shelly Office Fallback Hotspot"
