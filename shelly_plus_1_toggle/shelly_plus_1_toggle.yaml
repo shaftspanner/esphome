@@ -77,45 +77,24 @@ binary_sensor:
     filters:
       - delayed_on_off: 50ms
     # config for state change of input toggle
-    # Case 1: Relay is off so light must be off and state change was off - do nothing
-    # Case 2: Relay is off so light must be off and state change was on - turn on relay
-    # Case 3: Relay is on so light is on, and state change was off - turn off relay
-    # Case 4: Relay is on so light is on, and state change was to on - Turn off relay then turn it on
+    # Case 1: State change was off - turn off relay
+    # Case 2: State change was on - turn on relay
 
     on_state:
         then:
           - if:
-              condition: 
-                - switch.is_on: shelly_relay
+              condition:
+                - binary_sensor.is_on: toggle
               then:
-                - if:
-                    condition:
-                      - binary_sensor.is_on: toggle
-                    then:
-                      # Case 4: Relay is on so light is on, and state change was to on - Turn off relay then turn it on
-                      - logger.log: Switch was turned on
-                      - switch.turn_off: shelly_relay
-                      - delay: 0.2s
-                      - switch.turn_on: shelly_relay
-                      - logger.log: Case 4 - Relay was cycled on
-                    else:
-                      # Case 3: Relay is on so light is on, and state change was off - turn off relay
-                      - logger.log: Switch as turned off
-                      - switch.turn_off: shelly_relay
-                      - logger.log: Case 3 - Relay was turned off
+                # Case 2: State change was on - turn on relay
+                - logger.log: Switch was turned on
+                - switch.turn_on: shelly_relay
+                - logger.log: Case 2 - Relay was turned on
               else:
-                - if:
-                    condition:
-                      - binary_sensor.is_on: toggle
-                    then:
-                      # Case 2: Relay is off so light must be off and state change was on - turn on relay
-                      - logger.log: Switch was turned on
-                      - switch.turn_on: shelly_relay
-                      - logger.log: Case 2 - Relay was turned on
-                    else:
-                      # Case 1: Relay is off so light must be off and state change was off - do nothing
-                      - logger.log: Switch was turned off
-                      - logger.log: Case 1 - Relay was already off
+                # Case 1: State change was off - turn off relay
+                - logger.log: Switch was turned off
+                - switch.turn_off: shelly_relay
+                - logger.log: Case 1 - Relay was turned off
       
 
 sensor:
