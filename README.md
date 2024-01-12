@@ -2,6 +2,7 @@
 Configurations for my ESPHome devices
 
 ## Shelly Plus 1:
+![Shelly Plus 1.](https://shellystore.co.uk/wp-content/uploads/2021/10/1.png)
 ### Note for setup:
 New Shelly devices need to be configured in Home Assistant to allow them to make calls to Home Assistant.  See this forum message [here](https://community.home-assistant.io/t/home-assistant-rejecting-a-esphome-homeassistant-service/604085).
 
@@ -12,6 +13,7 @@ New Shelly devices need to be configured in Home Assistant to allow them to make
   - [Shelly device housed behind a toggle switch using a standard (dumb) bulb](https://github.com/shaftspanner/esphome/tree/main/shelly_plus_1_toggle)
     - I use this configuration for most of my Shelly devices - anything that doesn't use a dumb bulb.  Note that it retains up = off, down = on - standard for UK light switches
 ## Localbytes UK/EU Smart Plug with Power Monitoring:
+![Localbytes Power Monitoring Smart Plug](https://cdn.shopify.com/s/files/1/0541/0101/6767/products/plug-side.psd_1024x1024@2x.png?v=1651429989)
   - [Localbytes UK/EU smart plug with power monitoring](https://github.com/shaftspanner/esphome/blob/main/localbytes_uk_plug_standard)
     - Localbytes sell a brilliant UK/EU smart plug that comes pre-loaded with either Tasmota or ESPHome.  It's available here: [www.mylocalbytes.com](https://www.mylocalbytes.com/products/smart-plug-pm)
     - This configuration is draws of the stock configuration supplied by Localbytes but moves the API Encryption Key to the secrets.yaml file, and fixes the IP address.
