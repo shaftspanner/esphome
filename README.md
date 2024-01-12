@@ -10,4 +10,5 @@ New Shelly devices need to be configured in Home Assistant to allow them to make
     - Checks whether Shelly is connected to the Home Assistant API and switches the light on or off accordingly using either the Home Assistant API or the Shelly relay
     - This is a pretty complicated configuration but it covers just about all of the options whilst allowing for the case where Home Assistant isn't availble, but trying to make best use of the features of the smart bulb
   - [Shelly device housed behind a toggle switch using a standard (dumb) bulb](https://github.com/shaftspanner/esphome/tree/main/shelly_plus_1_toggle)
+    - I use this configuration for most of my Shelly devices - anything that doesn't use a dumb bulb.  Note that it retains up = off, down = on - standard for UK light switches
 
